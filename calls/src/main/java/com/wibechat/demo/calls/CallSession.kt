@@ -20,6 +20,7 @@ import com.wibechat.android.room.track.Track
 import com.wibechat.android.room.track.TrackPublication
 import com.wibechat.android.room.track.VideoTrack
 import com.wibechat.android.room.track.screencapture.ScreenCaptureParams
+import com.twilio.audioswitch.AudioDevice
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -86,7 +87,20 @@ class CallSession(context: Context) {
     /** Set while *we* are disconnecting, so that isn't reported as [ConnectionStatus.Lost]. */
     private var disconnectRequested = false
 
+    /** Reports the SDK's active output (speaker, earpiece, headset) into [state]. Called off the main thread. */
+    private val audioDeviceListener: (List<AudioDevice>, AudioDevice?) -> Unit = { _, selected ->
+        val route = when (selected) {
+            is AudioDevice.Speakerphone -> AudioRoute.Speaker
+            is AudioDevice.Earpiece -> AudioRoute.Earpiece
+            is AudioDevice.BluetoothHeadset -> AudioRoute.Bluetooth
+            is AudioDevice.WiredHeadset -> AudioRoute.Wired
+            else -> AudioRoute.Unknown
+        }
+        scope.launch { _state.update { it.copy(audioRoute = route) } }
+    }
+
     init {
+        room.audioSwitchHandler?.registerAudioDeviceChangeListener(audioDeviceListener)
         scope.launch { room.events.collect(::onRoomEvent) }
         // Local publish/mute changes come through the participant's own events.
         scope.launch { room.localParticipant.events.collect { refresh() } }
@@ -120,6 +134,25 @@ class CallSession(context: Context) {
     suspend fun setCameraEnabled(enabled: Boolean) {
         room.localParticipant.setCameraEnabled(enabled)
         refresh()
+    }
+
+    /**
+     * Loudspeaker (true) or earpiece (false). Set it before [connect] for the
+     * starting route: earpiece for audio calls, loudspeaker for video.
+     *
+     * Uses the SDK's priority list rather than a fixed device, so a Bluetooth
+     * or wired headset still takes over when connected, and a device with no
+     * earpiece (most tablets) falls back to the loudspeaker.
+     */
+    fun setSpeakerphone(on: Boolean) {
+        val headsets = listOf(AudioDevice.BluetoothHeadset::class.java, AudioDevice.WiredHeadset::class.java)
+        val builtIn = if (on) {
+            listOf(AudioDevice.Speakerphone::class.java, AudioDevice.Earpiece::class.java)
+        } else {
+            listOf(AudioDevice.Earpiece::class.java, AudioDevice.Speakerphone::class.java)
+        }
+        room.audioSwitchHandler?.preferredDeviceList = headsets + builtIn
+        _state.update { it.copy(speakerphone = on) }
     }
 
     /** Switches between the front and back camera. No-op when the camera is off. */
@@ -258,11 +291,12 @@ class CallSession(context: Context) {
         statsJob = null
         disconnectRequested = true
         room.disconnect()
-        _state.update { CallSessionState() }
+        _state.update { CallSessionState(speakerphone = it.speakerphone) }
     }
 
     /** Leaves the room and frees the SDK resources for good. */
     fun release() {
+        room.audioSwitchHandler?.unregisterAudioDeviceChangeListener(audioDeviceListener)
         disconnect()
         cameraTrackWeCreated?.let { runCatching { it.dispose() } }
         cameraTrackWeCreated = null

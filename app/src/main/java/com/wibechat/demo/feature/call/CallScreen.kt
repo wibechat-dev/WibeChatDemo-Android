@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,7 +32,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Cameraswitch
+import androidx.compose.material.icons.outlined.PhoneInTalk
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MicOff
 import androidx.compose.material.icons.outlined.PersonAddAlt1
@@ -82,6 +85,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wibechat.demo.call.ActiveCall
 import com.wibechat.demo.call.CallArgs
+import com.wibechat.demo.calls.AudioRoute
+import com.wibechat.demo.calls.ProximityScreenLock
 import com.wibechat.demo.feature.calllog.formatDuration
 import com.wibechat.demo.ui.components.AppReveal
 import com.wibechat.demo.ui.components.CallHalo
@@ -127,6 +132,12 @@ fun CallScreen(args: CallArgs, onClose: () -> Unit) {
     BackHandler { vm.leave() }
     KeepScreenOnWithLightIcons()
 
+    // Screen off at the ear while audio is on the earpiece (the system uses the proximity sensor).
+    val proximity = remember { ProximityScreenLock(context) }
+    val atEar = ui.session.audioRoute == AudioRoute.Earpiece && !inPip
+    LaunchedEffect(atEar) { proximity.setActive(atEar) }
+    DisposableEffect(proximity) { onDispose { proximity.setActive(false) } }
+
     // Android's PiP window is tiny: only the other person's video, no chrome.
     if (inPip) {
         Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -171,9 +182,9 @@ fun CallScreen(args: CallArgs, onClose: () -> Unit) {
             Box(Modifier.animateContentSize()) { NetworkBannerFor(ui) }
             Box(Modifier.weight(1f)) {
                 when {
-                    ui.connecting -> StatusView(title, "Connecting…", ui.reconnecting, vm::leave)
+                    ui.connecting -> StatusView(title, "Connecting…", ui.reconnecting, ui.session.speakerphone, vm::toggleSpeaker, vm::leave)
                     ui.error != null -> ErrorView(ui.error!!, onRetry = vm::join, onEnd = vm::leave)
-                    remotes.isEmpty() -> StatusView(title, if (args.isOutgoing) "Calling…" else "Connecting…", ui.reconnecting, vm::leave)
+                    remotes.isEmpty() -> StatusView(title, if (args.isOutgoing) "Calling…" else "Connecting…", ui.reconnecting, ui.session.speakerphone, vm::toggleSpeaker, vm::leave)
                     else -> Column(Modifier.fillMaxSize()) {
                         if (!ui.mediaGranted) {
                             Text(
@@ -200,6 +211,7 @@ fun CallScreen(args: CallArgs, onClose: () -> Unit) {
                             onMic = vm::toggleMicrophone,
                             onCamera = vm::toggleCamera,
                             onFlip = vm::flipCamera,
+                            onSpeaker = vm::toggleSpeaker,
                             onShare = {
                                 if (ui.session.screenShareEnabled) {
                                     vm.stopScreenShare()
@@ -234,7 +246,14 @@ private fun NetworkBannerFor(ui: CallUiState) {
 
 /** Phone-dialer style "Calling…" / "Connecting…" before the other person's media arrives. */
 @Composable
-private fun StatusView(title: String, status: String, reconnecting: Boolean, onEnd: () -> Unit) {
+private fun StatusView(
+    title: String,
+    status: String,
+    reconnecting: Boolean,
+    speakerOn: Boolean,
+    onSpeaker: () -> Unit,
+    onEnd: () -> Unit,
+) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         AppReveal {
             Column(
@@ -247,7 +266,10 @@ private fun StatusView(title: String, status: String, reconnecting: Boolean, onE
                 Spacer(Modifier.height(10.dp))
                 Text(if (reconnecting) "Reconnecting…" else status, color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp)
                 Spacer(Modifier.height(48.dp))
-                ControlButton("End call", Icons.Rounded.CallEnd, AppColors.Error, Color.White, onEnd)
+                Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
+                    SpeakerButton(speakerOn, onSpeaker)
+                    ControlButton("End call", Icons.Rounded.CallEnd, AppColors.Error, Color.White, onEnd)
+                }
             }
         }
     }
@@ -279,6 +301,7 @@ private fun ControlBar(
     onMic: () -> Unit,
     onCamera: () -> Unit,
     onFlip: () -> Unit,
+    onSpeaker: () -> Unit,
     onShare: () -> Unit,
     onEnd: () -> Unit,
 ) {
@@ -313,6 +336,7 @@ private fun ControlBar(
         if (camOn) {
             ControlButton("Flip", Icons.Outlined.Cameraswitch, Color.White.copy(alpha = 0.12f), Color.White, onFlip)
         }
+        SpeakerButton(ui.session.speakerphone, onSpeaker)
         ControlButton(
             if (sharing) "Stop sharing" else "Share",
             if (sharing) Icons.Outlined.StopScreenShare else Icons.Outlined.ScreenShare,
@@ -322,6 +346,18 @@ private fun ControlBar(
         )
         ControlButton("End call", Icons.Rounded.CallEnd, AppColors.Error, Color.White, onEnd)
     }
+}
+
+/** Loudspeaker on = highlighted, like the phone app. */
+@Composable
+private fun SpeakerButton(on: Boolean, onClick: () -> Unit) {
+    ControlButton(
+        "Speaker",
+        if (on) Icons.AutoMirrored.Outlined.VolumeUp else Icons.Outlined.PhoneInTalk,
+        if (on) Color.White else Color.White.copy(alpha = 0.12f),
+        if (on) AppColors.CallBackground else Color.White,
+        onClick,
+    )
 }
 
 /** Ring someone else into this 1:1 room. Hides people already in the call. */

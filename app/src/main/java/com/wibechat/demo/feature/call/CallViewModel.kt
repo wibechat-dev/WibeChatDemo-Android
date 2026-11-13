@@ -84,6 +84,8 @@ class CallViewModel(app: Application, val args: CallArgs) : AndroidViewModel(app
 
     init {
         ActiveCall.setActive(true)
+        // Like a phone call: audio calls start on the earpiece, video calls on the loudspeaker.
+        session.setSpeakerphone(args.startWithVideo)
 
         viewModelScope.launch {
             session.state.collect { s ->
@@ -167,8 +169,14 @@ class CallViewModel(app: Application, val args: CallArgs) : AndroidViewModel(app
     }
 
     fun toggleCamera() = withMedia {
-        session.setCameraEnabled(!session.state.value.cameraEnabled)
+        val cameraOn = !session.state.value.cameraEnabled
+        session.setCameraEnabled(cameraOn)
+        // Camera on means the phone is in front of you, not at your ear: follow it with the speaker.
+        session.setSpeakerphone(cameraOn)
     }
+
+    /** Loudspeaker ↔ earpiece. A connected headset always plays regardless. */
+    fun toggleSpeaker() = session.setSpeakerphone(!session.state.value.speakerphone)
 
     fun flipCamera() = session.flipCamera()
 

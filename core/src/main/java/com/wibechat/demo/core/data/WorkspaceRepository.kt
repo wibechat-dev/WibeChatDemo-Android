@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import org.json.JSONObject
 
@@ -119,9 +121,17 @@ class WorkspaceRepository(
                                 )
                             }
                         }
+                        // Switching workspaces revokes read access to the OLD workspace a moment
+                        // before this listener is replaced; that error must not end the outer
+                        // listener, or the new workspace is never noticed until sign-in again.
+                        .catch { emit(WorkspaceState.None) }
                 }
             }
-            .catch { emit(WorkspaceState.None) }
+            // A dropped connection to your own user doc: listen again rather than give up.
+            .retryWhen { _, attempt ->
+                delay(minOf(1_000L * (attempt + 1), 10_000L))
+                true
+            }
 
     private fun com.google.firebase.firestore.DocumentReference.snapshotFlow() =
         callbackFlow {

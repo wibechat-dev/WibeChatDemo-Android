@@ -50,6 +50,9 @@ data class ParticipantTile(
         get() = connectionQuality == ConnectionQuality.POOR || connectionQuality == ConnectionQuality.LOST
 }
 
+/** Where call audio is playing right now. */
+enum class AudioRoute { Speaker, Earpiece, Bluetooth, Wired, Unknown }
+
 /** Snapshot of everything the call UI renders. */
 data class CallSessionState(
     val connection: ConnectionStatus = ConnectionStatus.Idle,
@@ -59,6 +62,10 @@ data class CallSessionState(
     val microphoneEnabled: Boolean = false,
     val cameraEnabled: Boolean = false,
     val screenShareEnabled: Boolean = false,
+    /** The user's choice: loudspeaker (true) or earpiece (false). A headset still wins when connected. */
+    val speakerphone: Boolean = true,
+    /** The output actually in use, reported by the SDK. */
+    val audioRoute: AudioRoute = AudioRoute.Unknown,
 )
 
 /** What the user asked for. The server can still lower quality when the network can't keep up. */
