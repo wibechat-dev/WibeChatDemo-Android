@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Blue ring drawn over a tile while that person is speaking. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <stroke android:width="3dp" android:color="@color/primary" />
+    <corners android:radius="22dp" />
+</shape>

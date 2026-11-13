@@ -1,0 +1,233 @@
+package com.wibechat.xmldemo
+
+import android.app.PendingIntent
+import android.app.PictureInPictureParams
+import android.app.RemoteAction
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.res.Configuration
+import android.graphics.drawable.Icon
+import android.os.Build
+import android.os.Bundle
+import android.util.Rational
+import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.wibechat.demo.core.CoreServices
+import com.wibechat.demo.core.auth.SessionState
+import com.wibechat.demo.core.data.NotificationType
+import com.wibechat.demo.core.data.PushKeys
+import com.wibechat.demo.core.data.WorkspaceState
+import com.wibechat.xmldemo.call.ActiveCall
+import com.wibechat.xmldemo.call.CallArgs
+import com.wibechat.xmldemo.call.CallLauncher
+import com.wibechat.xmldemo.feature.auth.LoginFragment
+import com.wibechat.xmldemo.feature.call.CallFragment
+import com.wibechat.xmldemo.feature.home.HomeFragment
+import com.wibechat.xmldemo.feature.workspace.WorkspaceSetupFragment
+import com.wibechat.xmldemo.notifications.IncomingCallManager
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
+
+/**
+ * The only regular activity. Hosts the screen fragments, routes notification
+ * intents to the call screen, and does system Picture-in-Picture for calls.
+ *
+ * Which screen shows is decided here, in three steps (like Flutter's `AuthGate`):
+ * 1. signed out → login / sign-up
+ * 2. signed in, no workspace yet → "Connect your workspace" (once per account)
+ * 3. signed in with a workspace → home, with calls opened on top of it
+ */
+class MainActivity : AppCompatActivity() {
+
+    private var hangUpReceiver: BroadcastReceiver? = null
+    private lateinit var startupPermissions: StartupPermissions
+
+    /** Identifies the root screen on show ("auth", "setup:<uid>", "home:<uid>:<workspace>"), so it's only replaced when it changes. */
+    private var rootKey: String? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        startupPermissions = StartupPermissions(this)
+        rootKey = savedInstanceState?.getString(KEY_ROOT)
+
+        if (savedInstanceState == null) {
+            startupPermissions.ask()
+            handleIntent(intent) // a recreated activity already handled its intent
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                combine(CoreServices.auth.session, CoreServices.workspace.state, CallLauncher.pending) { session, workspace, _ ->
+                    session to workspace
+                }.collect { (session, workspace) ->
+                    showRoot(session, workspace)
+                    openPendingCall()
+                }
+            }
+        }
+    }
+
+    // ---- screens -----------------------------------------------------------
+
+    private fun showRoot(session: SessionState, workspace: WorkspaceState) {
+        val (key, screen) = when (session) {
+            SessionState.Loading -> "loading" to { LoadingFragment() }
+            SessionState.SignedOut -> "auth" to { LoginFragment() }
+            is SessionState.SignedIn -> {
+                val uid = session.user.uid
+                when (workspace) {
+                    WorkspaceState.Loading -> "loading" to { LoadingFragment() }
+                    WorkspaceState.None -> "setup:$uid" to { WorkspaceSetupFragment() }
+                    is WorkspaceState.Joined -> "home:$uid:${workspace.workspace.id}" to { HomeFragment.newInstance(workspace.workspace) }
+                }
+            }
+        }
+        if (key == rootKey) return
+        rootKey = key
+
+        val fm = supportFragmentManager
+        // A new root drops everything above it (sign-up, an open call).
+        fm.popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        fm.beginTransaction()
+            .setReorderingAllowed(true)
+            .replace(R.id.container, screen())
+            .commitNow()
+    }
+
+    /** Any request to open a call (button, notification, Accept) lands here once Home is showing. */
+    private fun openPendingCall() {
+        val args = CallLauncher.pending.value ?: return
+        if (rootKey?.startsWith("home:") != true) return // wait for sign-in + workspace
+        CallLauncher.consume()
+
+        val fm = supportFragmentManager
+        val top: Fragment? = fm.findFragmentById(R.id.container)
+        if (top is CallFragment && top.args.roomId == args.roomId) return // already in that room
+        if (top is CallFragment) fm.popBackStackImmediate(CallFragment.BACK_STACK_NAME, FragmentManager.POP_BACK_STACK_INCLUSIVE)
+
+        fm.beginTransaction()
+            .setReorderingAllowed(true)
+            .replace(R.id.container, CallFragment.newInstance(args))
+            .addToBackStack(CallFragment.BACK_STACK_NAME)
+            .commit()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(KEY_ROOT, rootKey)
+    }
+
+    // ---- notification intents ------------------------------------------------
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    /** Opens a call from an incoming-call Accept, a local notification tap, or an FCM notification tap. */
+    private fun handleIntent(intent: Intent?) {
+        intent ?: return
+        when (intent.action) {
+            ACTION_ACCEPT_CALL -> {
+                val callId = intent.getStringExtra(EXTRA_CALL_ID) ?: return
+                val call = IncomingCallManager.accept(this, callId) ?: return
+                CallLauncher.open(
+                    CallArgs(roomId = call.roomId, title = call.callerName, startWithVideo = call.video, isOutgoing = false),
+                )
+            }
+
+            else -> {
+                // Local notifications and FCM's own notifications both carry the
+                // push `data` as extras. Only call pushes open a room on tap.
+                val type = intent.getStringExtra(PushKeys.TYPE)
+                val roomId = intent.getStringExtra(PushKeys.ROOM_ID)
+                if (NotificationType.isIncomingCall(type) && !roomId.isNullOrBlank()) {
+                    CallLauncher.open(
+                        CallArgs(
+                            roomId = roomId,
+                            title = intent.getStringExtra(PushKeys.TITLE),
+                            startWithVideo = type == NotificationType.VIDEO_CALL,
+                        ),
+                    )
+                }
+            }
+        }
+        intent.action = null
+    }
+
+    // ---- Picture-in-Picture --------------------------------------------------
+
+    /** Home / app switch / Recents while a call is open → shrink into PiP. */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (ActiveCall.isActive.value) enterPip()
+    }
+
+    private fun enterPip(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+        val params = PictureInPictureParams.Builder()
+            .setAspectRatio(Rational(9, 16))
+            .setActions(listOf(hangUpAction()))
+            .build()
+        return try {
+            enterPictureInPictureMode(params)
+        } catch (_: Exception) {
+            false // some devices report support but refuse; fall back to a normal minimise
+        }
+    }
+
+    private fun hangUpAction(): RemoteAction {
+        val intent = Intent(ACTION_PIP_HANG_UP).setPackage(packageName)
+        val pending = PendingIntent.getBroadcast(
+            this, REQUEST_HANG_UP, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val icon = Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel)
+        return RemoteAction(icon, "End call", "End call", pending)
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        ActiveCall.setPipMode(isInPictureInPictureMode)
+        if (isInPictureInPictureMode) {
+            if (hangUpReceiver == null) {
+                hangUpReceiver = object : BroadcastReceiver() {
+                    override fun onReceive(context: Context?, intent: Intent?) = ActiveCall.requestHangUp()
+                }
+                ContextCompat.registerReceiver(
+                    this, hangUpReceiver, IntentFilter(ACTION_PIP_HANG_UP), ContextCompat.RECEIVER_NOT_EXPORTED,
+                )
+            }
+        } else {
+            unregisterHangUpReceiver()
+        }
+    }
+
+    override fun onDestroy() {
+        unregisterHangUpReceiver()
+        super.onDestroy()
+    }
+
+    private fun unregisterHangUpReceiver() {
+        hangUpReceiver?.let { runCatching { unregisterReceiver(it) } }
+        hangUpReceiver = null
+    }
+
+    companion object {
+        const val ACTION_ACCEPT_CALL = "com.wibechat.xmldemo.action.ACCEPT_CALL"
+        const val EXTRA_CALL_ID = "callId"
+        private const val ACTION_PIP_HANG_UP = "com.wibechat.xmldemo.action.PIP_HANG_UP"
+        private const val REQUEST_HANG_UP = 1001
+        private const val KEY_ROOT = "rootKey"
+    }
+}

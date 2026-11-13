@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Inputs: outlined, 16dp corners (Compose AppTextField). -->
+    <style name="Widget.WibeChat.TextField" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">@dimen/radius_field</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/radius_field</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/radius_field</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/radius_field</item>
+        <item name="boxStrokeColor">@color/primary</item>
+        <item name="boxBackgroundColor">@color/surface</item>
+        <item name="startIconTint">@color/text_secondary</item>
+    </style>
+
+    <!-- Primary button: 56dp, 16dp corners (Compose AppButton). -->
+    <style name="Widget.WibeChat.Button" parent="Widget.Material3.Button">
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="cornerRadius">@dimen/radius_button</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Widget.WibeChat.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="cornerRadius">@dimen/radius_button</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="strokeColor">@color/border</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="Widget.WibeChat.Button.Tonal" parent="Widget.Material3.Button.TonalButton.Icon">
+        <item name="cornerRadius">@dimen/radius_button</item>
+        <item name="backgroundTint">@color/primary_light</item>
+        <item name="android:textColor">@color/primary</item>
+        <item name="iconTint">@color/primary</item>
+    </style>
+
+    <style name="Widget.WibeChat.TextButton" parent="Widget.Material3.Button.TextButton" />
+
+    <!-- Type scale (Compose AppTypography). -->
+    <style name="Text.WibeChat.HeadlineLarge" parent="">
+        <item name="android:textSize">34sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:letterSpacing">-0.035</item>
+        <item name="android:lineSpacingExtra">4sp</item>
+        <item name="android:fontFamily">sans-serif-black</item>
+    </style>
+
+    <style name="Text.WibeChat.HeadlineMedium" parent="">
+        <item name="android:textSize">28sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:letterSpacing">-0.03</item>
+        <item name="android:fontFamily">sans-serif-black</item>
+    </style>
+
+    <style name="Text.WibeChat.TitleLarge" parent="">
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+
+    <style name="Text.WibeChat.TitleMedium" parent="">
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="Text.WibeChat.Body" parent="">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:lineSpacingExtra">6sp</item>
+    </style>
+
+    <style name="Text.WibeChat.Caption" parent="">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+    <style name="ShapeAppearance.WibeChat.Logo" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+    <!-- Row in the account drawer. -->
+    <style name="Widget.WibeChat.DrawerItem" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingHorizontal">28dp</item>
+        <item name="android:drawablePadding">12dp</item>
+        <item name="android:drawableTint">@color/text_secondary</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="Widget.WibeChat.BottomNav" parent="Widget.Material3.BottomNavigationView">
+        <item name="backgroundTint">@color/surface</item>
+        <item name="itemIconTint">@color/nav_item</item>
+        <item name="itemTextColor">@color/nav_item</item>
+        <item name="itemActiveIndicatorStyle">@style/WibeChat.NavIndicator</item>
+    </style>
+
+    <style name="WibeChat.NavIndicator" parent="ShapeAppearance.Material3.Corner.Full">
+        <item name="android:color">@color/primary_light</item>
+    </style>
+</resources>

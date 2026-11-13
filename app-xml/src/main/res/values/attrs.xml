@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="AvatarView">
+        <!-- Brand gradient instead of flat primary blue. -->
+        <attr name="avatarGradient" format="boolean" />
+    </declare-styleable>
+</resources>

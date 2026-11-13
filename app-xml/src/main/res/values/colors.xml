@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Same palette as the Compose app's AppColors (and Flutter's). -->
+<resources>
+    <color name="primary">#FF4255D4</color>
+    <color name="primary_dark">#FF283998</color>
+    <color name="primary_light">#FFEEF0FF</color>
+    <color name="accent">#FF7357D8</color>
+    <color name="background">#FFF6F7FB</color>
+    <color name="surface">#FFFFFFFF</color>
+    <color name="text_primary">#FF17213B</color>
+    <color name="text_secondary">#FF657089</color>
+    <color name="hint">#FF79839A</color>
+    <color name="border">#FFE5E8F1</color>
+    <color name="error">#FFD83C54</color>
+    <color name="disabled">#FFD9DEEA</color>
+    <color name="success">#FF4CAF50</color>
+    <color name="warning">#FFE65100</color>
+    <color name="warning_light">#FFF57C00</color>
+    <color name="quality_good">#FF8BC34A</color>
+
+    <!-- Call screen (dark) -->
+    <color name="call_background">#FF10182B</color>
+    <color name="call_surface">#FF202B42</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="white_06">#0FFFFFFF</color>
+    <color name="white_10">#1AFFFFFF</color>
+    <color name="white_12">#1FFFFFFF</color>
+    <color name="white_14">#24FFFFFF</color>
+    <color name="white_30">#4DFFFFFF</color>
+    <color name="white_50">#80FFFFFF</color>
+    <color name="white_60">#99FFFFFF</color>
+    <color name="white_70">#B3FFFFFF</color>
+    <color name="white_80">#CCFFFFFF</color>
+    <color name="black_50">#80000000</color>
+    <color name="black_55">#8C000000</color>
+    <color name="warning_90">#E6E65100</color>
+</resources>

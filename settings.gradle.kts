@@ -22,5 +22,6 @@ dependencyResolutionManagement {
 rootProject.name = "WibeChatDemo"
 
 include(":app")   // Compose UI, notifications, Picture-in-Picture
+include(":app-xml") // Same app with XML layouts + Fragments (no Compose UI)
 include(":core")  // Config, Firebase (Auth + Firestore), Cloud Functions API clients
 include(":calls") // WibeChat SDK wrapper: call session + video renderer (no Firebase)

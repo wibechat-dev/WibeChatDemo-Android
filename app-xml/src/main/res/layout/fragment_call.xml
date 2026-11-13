@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/call_background"
+    android:orientation="vertical">
+
+    <!-- Top bar: back (ends the call), title, add-to-call, timer -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
+
+        <ImageButton
+            android:id="@+id/back"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="End call"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@color/white" />
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:maxLines="1"
+            android:textColor="@color/white"
+            android:textSize="18sp" />
+
+        <ImageButton
+            android:id="@+id/addToCall"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Add to call"
+            android:src="@drawable/ic_person_add"
+            android:visibility="gone"
+            app:tint="@color/white" />
+
+        <TextView
+            android:id="@+id/timer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:textColor="@color/white_70"
+            android:textSize="14sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Orange strip: reconnecting, or a weak connection -->
+    <LinearLayout
+        android:id="@+id/networkBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:animateLayoutChanges="true"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp"
+        android:visibility="gone">
+
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/bannerProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:indeterminate="true"
+            app:indicatorColor="@color/white"
+            app:indicatorSize="16dp"
+            app:trackThickness="2dp" />
+
+        <ImageView
+            android:id="@+id/bannerIcon"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_network_check"
+            app:tint="@color/white" />
+
+        <TextView
+            android:id="@+id/bannerText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/white"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- Phone-dialer style "Calling…" / "Connecting…" -->
+        <ScrollView
+            android:id="@+id/statusView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="32dp">
+
+                <com.wibechat.xmldemo.ui.HaloView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+
+                    <com.wibechat.xmldemo.ui.AvatarView
+                        android:id="@+id/statusAvatar"
+                        android:layout_width="112dp"
+                        android:layout_height="112dp"
+                        app:avatarGradient="true" />
+                </com.wibechat.xmldemo.ui.HaloView>
+
+                <TextView
+                    android:id="@+id/statusTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="28dp"
+                    android:gravity="center"
+                    android:letterSpacing="-0.02"
+                    android:textColor="@color/white"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/statusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:textColor="@color/white_70"
+                    android:textSize="15sp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="48dp"
+                    android:orientation="horizontal">
+
+                    <com.wibechat.xmldemo.feature.call.ControlButtonView
+                        android:id="@+id/statusSpeaker"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="32dp" />
+
+                    <com.wibechat.xmldemo.feature.call.ControlButtonView
+                        android:id="@+id/statusEnd"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- Couldn't join / connection lost -->
+        <LinearLayout
+            android:id="@+id/errorView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_wifi_off"
+                app:tint="@color/error" />
+
+            <TextView
+                android:id="@+id/errorText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:textColor="@color/white_70" />
+
+            <Button
+                android:id="@+id/retry"
+                style="@style/Widget.Material3.Button.Icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="Try again"
+                app:icon="@drawable/ic_refresh" />
+
+            <Button
+                android:id="@+id/errorEnd"
+                style="@style/Widget.WibeChat.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="End call"
+                android:textColor="@color/primary_light" />
+        </LinearLayout>
+
+        <!-- In the call -->
+        <LinearLayout
+            android:id="@+id/callView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/listenOnly"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/white_14"
+                android:gravity="center"
+                android:padding="12dp"
+                android:text="Microphone/camera permission was denied — you joined listen-only."
+                android:textColor="@color/white_70"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <com.wibechat.xmldemo.feature.call.VideoGridView
+                    android:id="@+id/grid"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <!-- Over the bottom-right of the video; your own 1:1 tile sits bottom-left. -->
+                <LinearLayout
+                    android:id="@+id/qualityBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_margin="12dp"
+                    android:background="@drawable/bg_quality_badge"
+                    android:clickable="true"
+                    android:contentDescription="Call quality"
+                    android:elevation="10dp"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="6dp">
+
+                    <View
+                        android:id="@+id/qualityDot"
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/bg_circle" />
+
+                    <TextView
+                        android:id="@+id/qualityText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/white"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/qualityMax"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="•  MAX"
+                        android:textColor="@color/primary_light"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <com.wibechat.xmldemo.feature.call.CenteredFlowLayout
+                android:id="@+id/controls"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_control_bar"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="18dp">
+
+                <com.wibechat.xmldemo.feature.call.ControlButtonView
+                    android:id="@+id/mic"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <com.wibechat.xmldemo.feature.call.ControlButtonView
+                    android:id="@+id/camera"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <com.wibechat.xmldemo.feature.call.ControlButtonView
+                    android:id="@+id/flip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <com.wibechat.xmldemo.feature.call.ControlButtonView
+                    android:id="@+id/speaker"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <com.wibechat.xmldemo.feature.call.ControlButtonView
+                    android:id="@+id/share"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <com.wibechat.xmldemo.feature.call.ControlButtonView
+                    android:id="@+id/end"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </com.wibechat.xmldemo.feature.call.CenteredFlowLayout>
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>

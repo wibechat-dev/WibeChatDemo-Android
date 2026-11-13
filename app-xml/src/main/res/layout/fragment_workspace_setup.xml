@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_auth"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="28dp">
+
+        <include
+            android:id="@+id/header"
+            layout="@layout/view_auth_header" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- 1. Paste the whole onboarding message: the fields fill themselves. -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/pasteLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Paste your WibeChat details"
+                app:placeholderText="WIBECHAT_SERVER_URL=…&#10;WIBECHAT_API_KEY=…&#10;WIBECHAT_CLIENT_ID=…">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/paste"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:gravity="top"
+                    android:inputType="textMultiLine|textNoSuggestions"
+                    android:minLines="3"
+                    android:textSize="13sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/pasteNote"
+                    style="@style/Text.WibeChat.Caption"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Paste the message and the fields below fill in." />
+
+                <Button
+                    android:id="@+id/pasteButton"
+                    style="@style/Widget.Material3.Button.TextButton.Icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Paste"
+                    app:icon="@drawable/ic_content_paste" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="16dp"
+                android:background="@color/border" />
+
+            <!-- 2. Or type them. -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/serverUrlLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Server URL"
+                app:placeholderText="https://api.wibechat.com"
+                app:startIconDrawable="@drawable/ic_dns">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/serverUrl"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionNext"
+                    android:inputType="textUri"
+                    android:text="https://api.wibechat.com" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/apiKeyLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:hint="API key"
+                app:endIconMode="password_toggle"
+                app:placeholderText="lk_…"
+                app:startIconDrawable="@drawable/ic_key">
+
+                <!-- saveEnabled=false: the key is never written to saved instance state. -->
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/apiKey"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionNext"
+                    android:inputType="textPassword"
+                    android:saveEnabled="false" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/clientIdLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:hint="Client ID"
+                app:placeholderText="13bb8ea1-e5a9-4718-ad13-a464f0831ce3"
+                app:startIconDrawable="@drawable/ic_badge">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/clientId"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:imeOptions="actionDone"
+                    android:inputType="text|textNoSuggestions"
+                    android:textSize="14sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <LinearLayout
+                android:id="@+id/verifiedRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_check_circle"
+                    app:tint="@color/success" />
+
+                <TextView
+                    android:id="@+id/verifiedText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:textColor="@color/success"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp">
+
+                <Button
+                    android:id="@+id/connect"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Connect workspace" />
+
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/connectProgress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:elevation="8dp"
+                    android:indeterminate="true"
+                    android:visibility="gone"
+                    app:indicatorColor="@color/white"
+                    app:indicatorSize="24dp"
+                    app:trackThickness="3dp" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp">
+
+                <Button
+                    android:id="@+id/test"
+                    style="@style/Widget.WibeChat.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Test connection" />
+
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/testProgress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:elevation="8dp"
+                    android:indeterminate="true"
+                    android:visibility="gone"
+                    app:indicatorColor="@color/primary"
+                    app:indicatorSize="24dp"
+                    app:trackThickness="3dp" />
+            </FrameLayout>
+
+            <TextView
+                style="@style/Text.WibeChat.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:lineSpacingExtra="4sp"
+                android:text="Your API key is sent once over HTTPS and stored on the server. It is never saved on this phone or shown to other users." />
+
+            <Button
+                android:id="@+id/differentAccount"
+                style="@style/Widget.WibeChat.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
+                android:text="Use a different account" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:text="@string/tagline"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
+    </LinearLayout>
+</ScrollView>

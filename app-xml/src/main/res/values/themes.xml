@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App theme: Material 3 (Material Components), light, brand colours. -->
+    <style name="Theme.WibeChat" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/primary_light</item>
+        <item name="colorOnPrimaryContainer">@color/primary_dark</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorSecondaryContainer">#FFE2E4F9</item>
+        <item name="colorOnSecondaryContainer">@color/primary_dark</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorSurfaceContainer">@color/surface</item>
+        <item name="colorSurfaceContainerHigh">@color/surface</item>
+        <item name="colorSurfaceContainerLow">@color/surface</item>
+        <item name="colorOutline">@color/border</item>
+        <item name="colorOutlineVariant">@color/border</item>
+        <item name="colorError">@color/error</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="textInputStyle">@style/Widget.WibeChat.TextField</item>
+        <item name="materialButtonStyle">@style/Widget.WibeChat.Button</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.WibeChat.Dialog</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.WibeChat.BottomSheet</item>
+    </style>
+
+    <!-- Full-screen ringing activity and the call screen background. -->
+    <style name="Theme.WibeChat.Call" parent="Theme.WibeChat">
+        <item name="android:windowBackground">@color/call_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="ThemeOverlay.WibeChat.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorSurfaceContainerHigh">@color/surface</item>
+    </style>
+
+    <style name="ThemeOverlay.WibeChat.BottomSheet" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.WibeChat.BottomSheet</item>
+    </style>
+
+    <style name="Widget.WibeChat.BottomSheet" parent="Widget.Material3.BottomSheet.Modal">
+        <item name="backgroundTint">@color/surface</item>
+    </style>
+
+    <!-- Dark sheet for call quality: white text on the call surface colour. -->
+    <style name="ThemeOverlay.WibeChat.BottomSheet.Dark" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.WibeChat.BottomSheet.Dark</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/white_60</item>
+        <item name="colorOnSurface">@color/white</item>
+        <item name="colorOnSurfaceVariant">@color/white_60</item>
+        <item name="colorPrimary">@color/white</item>
+        <item name="colorControlNormal">@color/white_60</item>
+        <item name="colorControlActivated">@color/white</item>
+    </style>
+
+    <style name="Widget.WibeChat.BottomSheet.Dark" parent="Widget.Material3.BottomSheet.Modal">
+        <item name="backgroundTint">@color/call_surface</item>
+    </style>
+</resources>

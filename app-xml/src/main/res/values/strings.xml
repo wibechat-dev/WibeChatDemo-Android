@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand name: change here to rebrand the app (launcher label, headers). -->
+    <string name="app_name">WibeChat</string>
+    <string name="app_name_title_case">WibeChat</string>
+    <string name="tagline">Good conversations start here.</string>
+</resources>

@@ -16,6 +16,7 @@ captures/
 local.properties
 secrets.properties
 app/google-services.json
+app-xml/google-services.json
 *.jks
 *.keystore
 
