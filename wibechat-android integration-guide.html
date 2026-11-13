@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WibeChat Android Integration</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a step rail (the real integration order) beside a reading column; the rail folds into a chip row on phones. */
+:root {
+  --bg: #f6f5fb;
+  --surface: #ffffff;
+  --sunken: #eceaf5;
+  --fg: #1d1a2e;
+  --muted: #5d5873;
+  --line: #dcd8ea;
+  --accent: #5b3fd6;
+  --accent-soft: #e9e4fd;
+  --live: #0f8a5f;
+  --live-soft: #dcf3ea;
+  --warn: #a35a00;
+  --warn-soft: #fbecd6;
+  --code-bg: #1e1b2e;
+  --code-fg: #e8e6f3;
+  --tok-key: #c4a7ff;
+  --tok-str: #9fe2b8;
+  --tok-com: #8d88a8;
+  --tok-type: #ffd08a;
+  --tok-num: #ff9fb0;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14121d; --surface: #1c1929; --sunken: #241f35; --fg: #ece9f7; --muted: #a39dbd;
+    --line: #322c47; --accent: #a58bff; --accent-soft: #2c2448; --live: #4fd29c; --live-soft: #173a2e;
+    --warn: #f0b35f; --warn-soft: #3a2a14; --code-bg: #0e0c16; --code-fg: #e8e6f3;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14121d; --surface: #1c1929; --sunken: #241f35; --fg: #ece9f7; --muted: #a39dbd;
+  --line: #322c47; --accent: #a58bff; --accent-soft: #2c2448; --live: #4fd29c; --live-soft: #173a2e;
+  --warn: #f0b35f; --warn-soft: #3a2a14; --code-bg: #0e0c16; --code-fg: #e8e6f3;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1.1rem; font-weight: 600; }
+p { margin: 0; max-width: 66ch; }
+a { color: var(--accent); }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--sunken); padding: 0.1em 0.35em; border-radius: 4px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.page { max-width: 1180px; margin: 0 auto; }
+
+.masthead { padding-block: 40px 28px; display: grid; gap: 14px; border-bottom: 1px solid var(--line); }
+.eyebrow { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.masthead .lede { color: var(--muted); font-size: 1.08rem; }
+.badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.badge { font-family: var(--font-mono); font-size: 0.78rem; padding: 3px 10px; border-radius: 999px; background: var(--sunken); color: var(--muted); }
+.badge.live { background: var(--live-soft); color: var(--live); }
+.badge.live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px; }
+.glance { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; max-width: 900px; }
+.glance div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; display: grid; gap: 2px; }
+.glance b { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); font-weight: 600; }
+.glance span { font-size: 0.88rem; color: var(--muted); }
+
+.shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 48px; padding-top: 32px; }
+.rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 20px); align-self: start; display: grid; gap: 16px; }
+.progress { display: grid; gap: 6px; }
+.progress-label { font-size: 0.85rem; color: var(--muted); display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.progress-bar { height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; }
+.progress-bar i { display: block; height: 100%; width: 0; background: var(--live); transition: width .3s ease; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.steps a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; color: var(--fg); text-decoration: none; font-size: 0.93rem; }
+.steps a:hover { background: var(--sunken); }
+.steps a.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.steps .num { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-mono); font-size: 0.72rem; border: 1.5px solid var(--line); color: var(--muted); }
+.steps a.done .num { background: var(--live); border-color: var(--live); color: var(--surface); }
+.steps a.done .num::after { content: "✓"; }
+.steps a.done .num span { display: none; }
+.rail-sep { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 10px 10px 2px; }
+
+.content { display: grid; gap: 56px; min-width: 0; }
+section { display: grid; gap: 16px; scroll-margin-top: 24px; min-width: 0; }
+.step-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.step-no { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); }
+.step-head h2 { flex: 1 1 auto; }
+.done-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 8px; cursor: pointer; background: var(--surface); }
+.done-toggle input { accent-color: var(--live); margin: 0; }
+.done-toggle:has(input:checked) { color: var(--live); border-color: var(--live); background: var(--live-soft); }
+
+ul.plain, ol.plain { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 66ch; }
+
+.callout { border-radius: var(--radius); padding: 12px 16px; font-size: 0.95rem; max-width: 72ch; display: grid; gap: 4px; }
+.callout strong { font-weight: 600; }
+.callout.warn { background: var(--warn-soft); color: var(--fg); border-left: 3px solid var(--warn); }
+.callout.info { background: var(--accent-soft); color: var(--fg); border-left: 3px solid var(--accent); }
+.callout.ok { background: var(--live-soft); color: var(--fg); border-left: 3px solid var(--live); }
+
+.code { background: var(--code-bg); color: var(--code-fg); border-radius: var(--radius); overflow: hidden; min-width: 0; }
+.code-bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 14px; border-bottom: 1px solid #ffffff14; }
+.code-file { font-family: var(--font-mono); font-size: 0.78rem; color: var(--tok-com); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tabs { display: flex; gap: 2px; }
+.tabs button, .copy { font: 500 0.78rem var(--font-body); color: var(--tok-com); background: transparent; border: 0; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: #ffffff1a; color: var(--code-fg); }
+.copy:hover, .tabs button:hover { color: var(--code-fg); }
+.copy.ok { color: var(--tok-str); }
+pre { margin: 0; padding: 14px 16px; overflow-x: auto; font: 0.86rem/1.6 var(--font-mono); tab-size: 4; }
+.k { color: var(--tok-key); } .s { color: var(--tok-str); } .c { color: var(--tok-com); font-style: italic; } .t { color: var(--tok-type); } .n { color: var(--tok-num); } .a { color: var(--tok-num); }
+
+.two-col { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; gap: 14px; }
+.panel h3 { font-size: 1rem; }
+.field { display: grid; gap: 5px; }
+.field label, .field .label { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+.field input[type="text"] { width: 100%; font: 0.9rem var(--font-mono); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.field input[type="text"]:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--sunken); border-radius: 8px; padding: 3px; gap: 3px; }
+.seg button { font: 500 0.85rem var(--font-body); border: 0; border-radius: 6px; padding: 6px; background: transparent; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px #0000001f; }
+.hint { font-size: 0.8rem; color: var(--muted); }
+
+/* Phase explorer */
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; position: relative; }
+.timeline::before { content: ""; position: absolute; left: 11px; top: 14px; bottom: 14px; width: 2px; background: var(--line); }
+.timeline button { position: relative; display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; background: transparent; border: 0; padding: 8px 8px 8px 0; cursor: pointer; color: var(--fg); font: 500 0.92rem var(--font-body); }
+.timeline .dot { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line); z-index: 1; }
+.timeline button[aria-selected="true"] .dot { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.timeline button[aria-selected="true"] { color: var(--accent); }
+.timeline .ev-name { font-family: var(--font-mono); font-size: 0.84rem; }
+.detail { display: grid; gap: 12px; min-width: 0; }
+.detail .when { color: var(--muted); }
+
+/* Behind the scenes */
+.flow { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; counter-reset: flow; }
+.flow li { counter-increment: flow; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; }
+.flow li::before { content: counter(flow); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font: 600 0.75rem var(--font-mono); }
+.flow .call { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; }
+.flow .why { font-size: 0.9rem; color: var(--muted); }
+.flow .who { font-size: 0.72rem; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--live); }
+
+/* Prompts */
+.prompts { display: grid; gap: 12px; }
+.prompt-slot { display: grid; gap: 10px; }
+.prompt.inline { border-style: dashed; border-color: var(--accent); background: var(--accent-soft); }
+.prompt.inline .prompt-head { padding: 10px 14px; align-items: center; }
+.prompt.inline h3 { font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
+.prompt.inline h3::before { content: "✦ AI prompt"; font: 600 0.7rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); background: var(--surface); border-radius: 999px; padding: 2px 8px; }
+.prompt.inline .prompt-head p { font-size: 0.85rem; }
+.prompt.inline .btn { padding: 5px 12px; font-size: 0.8rem; }
+.prompt.inline pre { background: var(--surface); }
+.prompt { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.prompt-head { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; flex-wrap: wrap; }
+.prompt-head div { flex: 1 1 260px; display: grid; gap: 4px; min-width: 0; }
+.prompt-head p { color: var(--muted); font-size: 0.92rem; }
+.prompt-actions { display: flex; gap: 8px; }
+.btn { font: 600 0.85rem var(--font-body); border-radius: 8px; padding: 7px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.btn.ok { background: var(--live); border-color: var(--live); color: var(--surface); }
+.prompt pre { background: var(--sunken); color: var(--fg); border-top: 1px solid var(--line); white-space: pre-wrap; word-break: break-word; max-height: 360px; font-size: 0.82rem; border-radius: 0 0 var(--radius) var(--radius); }
+
+.search { width: 100%; max-width: 420px; font: 0.95rem var(--font-body); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; }
+.search:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.faq { display: grid; gap: 8px; }
+.faq details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.faq summary { cursor: pointer; padding: 12px 16px; font-weight: 600; list-style: none; display: flex; gap: 10px; align-items: baseline; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::before { content: "+"; font-family: var(--font-mono); color: var(--accent); width: 1ch; }
+.faq details[open] summary::before { content: "−"; }
+.faq .body { padding: 0 16px 14px 36px; display: grid; gap: 10px; }
+.faq .sym { font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); }
+.empty { color: var(--muted); font-size: 0.95rem; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; background: var(--sunken); }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+
+footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .rail { position: static; }
+  .steps { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; padding-bottom: 6px; }
+  .rail-sep { display: none; }
+  .two-col { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div class="eyebrow">Android integration guide</div>
+    <h1>Add WibeChat calls to your Android app</h1>
+    <p class="lede">Sign users in, ring someone, and join their call with a few lines of Kotlin. The calls kit talks to the WibeChat app server for you; the SDK carries the audio and video.</p>
+    <div class="badges">
+      <span class="badge live">SDK 2.29.1 on Maven Central</span>
+      <span class="badge">min SDK 21</span>
+      <span class="badge">Kotlin + coroutines</span>
+    </div>
+    <div class="glance">
+      <div><b>calls.signIn(email, password)</b><span>Sign the user in once</span></div>
+      <div><b>calls.startCall(email, VIDEO)</b><span>Ring someone and connect</span></div>
+      <div><b>calls.join(callId)</b><span>Answer and connect</span></div>
+      <div><b>calls.hangUp()</b><span>Leave and tell the server</span></div>
+    </div>
+    <div class="prompt-slot" data-prompts="all" style="max-width:900px"></div>
+  </header>
+
+  <div class="shell">
+    <nav class="rail" aria-label="Integration steps">
+      <div class="progress">
+        <div class="progress-label"><span>Your progress</span><span id="progress-count">0 of 7</span></div>
+        <div class="progress-bar"><i id="progress-fill"></i></div>
+      </div>
+      <ol class="steps">
+        <li><a href="#install" data-step="install"><span class="num"><span>1</span></span>Add the SDK</a></li>
+        <li><a href="#kit" data-step="kit"><span class="num"><span>2</span></span>Add the calls kit</a></li>
+        <li><a href="#permissions" data-step="permissions"><span class="num"><span>3</span></span>Ask for permissions</a></li>
+        <li><a href="#signin" data-step="signin"><span class="num"><span>4</span></span>Sign users in</a></li>
+        <li><a href="#calls" data-step="calls"><span class="num"><span>5</span></span>Start or join a call</a></li>
+        <li><a href="#phases" data-step="phases"><span class="num"><span>6</span></span>Show the call</a></li>
+        <li><a href="#controls" data-step="controls"><span class="num"><span>7</span></span>Mute and hang up</a></li>
+        <li class="rail-sep">More</li>
+        <li><a href="#behind"><span class="num"><span>↔</span></span>Behind the scenes</a></li>
+        <li><a href="#more"><span class="num"><span>+</span></span>More features</a></li>
+        <li><a href="#troubleshooting"><span class="num"><span>?</span></span>Troubleshooting</a></li>
+        <li><a href="#reference"><span class="num"><span>≡</span></span>Reference</a></li>
+      </ol>
+    </nav>
+
+    <main class="content">
+
+      <section id="install">
+        <div class="step-head"><span class="step-no">Step 1</span><h2>Add the SDK</h2><label class="done-toggle"><input type="checkbox" data-done="install"> Done</label></div>
+        <p>The SDK is on Maven Central. One of its dependencies is only served from JitPack, so add both repositories. The calls kit also uses OkHttp.</p>
+        <div class="prompt-slot" data-prompts="install"></div>
+        <div class="code" data-lang-group>
+          <div class="code-bar"><span class="code-file" data-file-kts="settings.gradle.kts" data-file-groovy="settings.gradle">settings.gradle.kts</span><div class="tabs"><button type="button" data-build="kts">Kotlin DSL</button><button type="button" data-build="groovy">Groovy</button></div><button class="copy" type="button">Copy</button></div>
+          <pre data-build-kts>dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io")
+    }
+}</pre>
+          <pre data-build-groovy hidden>dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}</pre>
+        </div>
+        <div class="code" data-lang-group>
+          <div class="code-bar"><span class="code-file" data-file-kts="app/build.gradle.kts" data-file-groovy="app/build.gradle">app/build.gradle.kts</span><div class="tabs"><button type="button" data-build="kts">Kotlin DSL</button><button type="button" data-build="groovy">Groovy</button></div><button class="copy" type="button">Copy</button></div>
+          <pre data-build-kts>dependencies {
+    implementation("com.wibechat:wibechat-android:2.29.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")   // used by the calls kit
+}</pre>
+          <pre data-build-groovy hidden>dependencies {
+    implementation "com.wibechat:wibechat-android:2.29.1"
+    implementation "com.squareup.okhttp3:okhttp:4.12.0"   // used by the calls kit
+}</pre>
+        </div>
+      </section>
+
+      <section id="kit">
+        <div class="step-head"><span class="step-no">Step 2</span><h2>Add the calls kit</h2><label class="done-toggle"><input type="checkbox" data-done="kit"> Done</label></div>
+        <p>The calls kit is four Kotlin files that handle the whole call flow with the app server: sign-in, ringing, the call token, keeping call state in sync, and hanging up. Copy the <code>calls</code> folder from the <strong>wibechat-quickstart</strong> project into your app, or have an AI assistant write it with the prompt below.</p>
+        <div class="code">
+          <div class="code-bar"><span class="code-file">wibechat-quickstart/app/src/main/java/com/wibechat/quickstart/calls/</span><button class="copy" type="button">Copy</button></div>
+          <pre>WibeChatCalls.kt   the kit: signIn, startCall, join, hangUp, phase
+AppServer.kt       the app-server API (/login, /ringCall, /callToken, ...)
+SessionStore.kt    remembers the signed-in user and this install's ID
+CallIds.kt         finds a call ID in pasted text, builds invite messages</pre>
+        </div>
+        <p>Create one instance for the whole app, so a call keeps running while screens change.</p>
+        <div class="prompt-slot" data-prompts="kit"></div>
+        <div class="code">
+          <div class="code-bar"><span class="code-file">MyApp.kt</span><button class="copy" type="button">Copy</button></div>
+          <pre data-kotlin>class MyApp : Application() {
+    val calls by lazy {
+        WibeChatCalls(
+            context = this,
+            appServerUrl = "https://us-central1-wibechat-demo-2026.cloudfunctions.net",
+        )
+    }
+}
+
+// In AndroidManifest.xml: &lt;application android:name=".MyApp" ...&gt;</pre>
+        </div>
+      </section>
+
+      <section id="permissions">
+        <div class="step-head"><span class="step-no">Step 3</span><h2>Ask for permissions</h2><label class="done-toggle"><input type="checkbox" data-done="permissions"> Done</label></div>
+        <p>The SDK already declares <code>INTERNET</code>, <code>CAMERA</code> and <code>RECORD_AUDIO</code>. Ask the user for the microphone (and the camera for video calls) before starting or joining.</p>
+        <div class="prompt-slot" data-prompts="permissions"></div>
+        <div class="code">
+          <div class="code-bar"><span class="code-file">CallActivity.kt</span><button class="copy" type="button">Copy</button></div>
+          <pre data-kotlin>private var afterPermission: (() -&gt; Unit)? = null
+
+private val permissionLauncher =
+    registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        if (hasPermission(Manifest.permission.RECORD_AUDIO)) afterPermission?.invoke()
+        afterPermission = null
+    }
+
+fun withCallPermissions(video: Boolean, action: () -&gt; Unit) {
+    val missing = listOfNotNull(
+        Manifest.permission.RECORD_AUDIO,
+        Manifest.permission.CAMERA.takeIf { video },
+    ).filterNot { hasPermission(it) }
+    if (missing.isEmpty()) action() else {
+        afterPermission = action
+        permissionLauncher.launch(missing.toTypedArray())
+    }
+}</pre>
+        </div>
+      </section>
+
+      <section id="signin">
+        <div class="step-head"><span class="step-no">Step 4</span><h2>Sign users in</h2><label class="done-toggle"><input type="checkbox" data-done="signin"> Done</label></div>
+        <p>Users sign in with their WibeChat email and password, or create an account. The kit remembers the session, so this happens once per install. Watch <code>calls.session</code> to switch between your sign-in and home screens.</p>
+        <div class="prompt-slot" data-prompts="signin"></div>
+        <div class="code">
+          <div class="code-bar"><span class="code-file">SignInActivity.kt</span><button class="copy" type="button">Copy</button></div>
+          <pre data-kotlin>lifecycleScope.launch {
+    calls.signIn(email, password)                 // or calls.register(email, password, fullName)
+        .onFailure { showError(it.message) }      // e.g. "Wrong email or password."
+}
+
+lifecycleScope.launch {
+    calls.session.collect { session -&gt;
+        if (session == null) showSignIn() else showHome(session.fullName ?: session.email)
+    }
+}
+
+calls.signOut()   // hangs up any call and forgets the session</pre>
+        </div>
+        <div class="callout info"><strong>Errors are ready to show.</strong><span>Every kit function returns a <code>Result</code>, never throws, and its failure message is written for users.</span></div>
+      </section>
+
+      <section id="calls">
+        <div class="step-head"><span class="step-no">Step 5</span><h2>Start or join a call</h2><label class="done-toggle"><input type="checkbox" data-done="calls"> Done</label></div>
+        <p>Starting a call rings the other person and connects you; it returns a call ID. Joining answers the call and connects. Choose what you are building and the code updates.</p>
+        <div class="prompt-slot" data-prompts="calls"></div>
+        <div class="two-col">
+          <form class="panel" id="builder" autocomplete="off">
+            <h3>Your call</h3>
+            <div class="field"><span class="label">This screen will</span>
+              <div class="seg" role="group" aria-label="Action"><button type="button" id="mode-start" aria-pressed="true">Start a call</button><button type="button" id="mode-join" aria-pressed="false">Join a call</button></div>
+            </div>
+            <div class="field" id="callee-field"><label for="in-callee">Who to call</label><input type="text" id="in-callee" value="friend@example.com"></div>
+            <div class="field"><span class="label">Call type</span>
+              <div class="seg" role="group" aria-label="Call type"><button type="button" id="type-video" aria-pressed="true">Video</button><button type="button" id="type-audio" aria-pressed="false">Audio</button></div>
+            </div>
+            <span class="hint">Example values. Nothing here is sent anywhere.</span>
+          </form>
+          <div class="code">
+            <div class="code-bar"><span class="code-file" id="gen-file">HomeActivity.kt</span><button class="copy" type="button">Copy</button></div>
+            <pre id="gen-code" data-kotlin></pre>
+          </div>
+        </div>
+        <div class="callout ok"><strong>Joining is one tap.</strong><span><code>calls.join()</code> accepts the whole invite message, not just the ID, so a "Paste &amp; join" button can read the clipboard and pass it straight in. Only the person who was called (or an invited group member) can join; anyone else gets "you are not a participant in this call".</span></div>
+      </section>
+
+      <section id="phases">
+        <div class="step-head"><span class="step-no">Step 6</span><h2>Show the call</h2><label class="done-toggle"><input type="checkbox" data-done="phases"> Done</label></div>
+        <p>Drive your screens from <code>calls.phase</code>. It moves through the phases below; the kit updates it when the other person joins, declines, cancels or hangs up. Pick a phase to see what to show.</p>
+        <div class="prompt-slot" data-prompts="phases"></div>
+        <div class="two-col">
+          <ol class="timeline" id="timeline" aria-label="Call phases"></ol>
+          <div class="detail">
+            <p class="when" id="phase-when"></p>
+            <div class="code">
+              <div class="code-bar"><span class="code-file" id="phase-file">CallActivity.kt</span><button class="copy" type="button">Copy</button></div>
+              <pre id="phase-code" data-kotlin></pre>
+            </div>
+          </div>
+        </div>
+        <p>Video goes into renderer views from the SDK. Initialise them once with <code>calls.room</code>, then attach tracks when the call is in progress.</p>
+        <div class="code">
+          <div class="code-bar"><span class="code-file">res/layout/activity_call.xml</span><button class="copy" type="button">Copy</button></div>
+          <pre>&lt;com.wibechat.android.renderer.SurfaceViewRenderer
+    android:id="@+id/remote_video"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" /&gt;
+
+&lt;com.wibechat.android.renderer.TextureViewRenderer
+    android:id="@+id/local_video"
+    android:layout_width="110dp"
+    android:layout_height="160dp"
+    android:layout_gravity="top|end" /&gt;</pre>
+        </div>
+        <div class="code">
+          <div class="code-bar"><span class="code-file">CallActivity.kt</span><button class="copy" type="button">Copy</button></div>
+          <pre data-kotlin>val room = calls.room
+room.initVideoRenderer(binding.remoteVideo)   // once, in onCreate
+room.initVideoRenderer(binding.localVideo)
+
+// Your camera, once the phase is InCall
+(room.localParticipant.getTrackPublication(Track.Source.CAMERA)?.track as? VideoTrack)
+    ?.addRenderer(binding.localVideo)
+
+// The other person's camera, when it arrives
+lifecycleScope.launch {
+    room.events.collect { event -&gt;
+        if (event is RoomEvent.TrackSubscribed) {
+            (event.track as? VideoTrack)?.addRenderer(binding.remoteVideo)
+        }
+    }
+}</pre>
+        </div>
+      </section>
+
+      <section id="controls">
+        <div class="step-head"><span class="step-no">Step 7</span><h2>Mute and hang up</h2><label class="done-toggle"><input type="checkbox" data-done="controls"> Done</label></div>
+        <p>Microphone and camera go through the room's local participant. <code>hangUp()</code> leaves the room and tells the server: it cancels the call if nobody answered yet, otherwise it marks the call ended, so the other phone closes too.</p>
+        <div class="prompt-slot" data-prompts="controls"></div>
+        <div class="code">
+          <div class="code-bar"><span class="code-file">CallActivity.kt</span><button class="copy" type="button">Copy</button></div>
+          <pre data-kotlin>fun toggleMute() = lifecycleScope.launch {
+    val me = calls.room.localParticipant
+    me.setMicrophoneEnabled(!me.isMicrophoneEnabled)
+}
+
+fun toggleCamera() = lifecycleScope.launch {
+    val me = calls.room.localParticipant
+    me.setCameraEnabled(!me.isCameraEnabled)
+}
+
+fun leave() = calls.hangUp()</pre>
+        </div>
+      </section>
+
+      <section id="behind">
+        <div class="step-head"><span class="step-no">Explained</span><h2>Behind the scenes</h2></div>
+        <p>What the kit does for each call. You only need this if you build without the kit or debug a problem.</p>
+        <div class="seg" role="group" aria-label="Scenario" style="max-width:360px"><button type="button" id="flow-out" aria-pressed="true">Starting a call</button><button type="button" id="flow-in" aria-pressed="false">Joining a call</button></div>
+        <ol class="flow" id="flow"></ol>
+        <div class="callout warn"><strong>Secrets stay on the server.</strong><span>The app never sees the call license key or the server's API secret. Rooms and identities are chosen by the server from the signed-in user, so a call ID alone does not let anyone in.</span></div>
+      </section>
+
+      <section id="more">
+        <div class="step-head"><span class="step-no">Next</span><h2>More features</h2></div>
+        <p>Building blocks beyond one-to-one calls. Each has a prompt that builds it on top of the calls kit.</p>
+        <h3>Ringing phones</h3>
+        <p>Today the person you call joins by pasting the shared invite. With push notifications their phone rings instead, and Accept joins the call. This needs Firebase Cloud Messaging and the app's <code>google-services.json</code> from the <code>wibechat-demo-2026</code> Firebase project. The incoming push carries <code>rk.type = "incoming"</code>, <code>rk.callId</code>, <code>rk.callerName</code> and <code>rk.callType</code>; Accept calls <code>calls.join(callId)</code>.</p>
+        <div class="prompt-slot" data-prompts="ringing"></div>
+        <h3>Group calls</h3>
+        <p>Ring everyone in a WibeChat group at once with <code>/ringGroup</code>; members join with the same <code>calls.join(callId)</code>.</p>
+        <div class="prompt-slot" data-prompts="group"></div>
+        <h3>A shared demo room</h3>
+        <p>A room anyone signed in can join without a call ID. The server has to issue its tokens, so this needs one small backend endpoint.</p>
+        <div class="prompt-slot" data-prompts="demo"></div>
+      </section>
+
+      <section id="troubleshooting">
+        <div class="step-head"><span class="step-no">Help</span><h2>Troubleshooting</h2></div>
+        <div class="prompt-slot" data-prompts="debug"></div>
+        <input class="search" type="search" id="faq-search" placeholder="Search by error message or symptom" aria-label="Search troubleshooting">
+        <div class="faq" id="faq"></div>
+        <p class="empty" id="faq-empty" hidden>No matching problems. Try a word from the error message.</p>
+      </section>
+
+      <section id="reference">
+        <div class="step-head"><span class="step-no">Reference</span><h2>Calls kit</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Member</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>WibeChatCalls(context, appServerUrl)</code></td><td>Creates the kit. Make one per app.</td></tr>
+              <tr><td><code>session: StateFlow&lt;Session?&gt;</code></td><td>The signed-in user, or null.</td></tr>
+              <tr><td><code>phase: StateFlow&lt;CallPhase&gt;</code></td><td><code>Idle</code>, <code>Connecting</code> or <code>InCall</code>.</td></tr>
+              <tr><td><code>room: Room</code></td><td>The SDK room, for video renderers and the local participant.</td></tr>
+              <tr><td><code>signIn(email, password)</code></td><td>Signs in and remembers the session.</td></tr>
+              <tr><td><code>register(email, password, fullName)</code></td><td>Creates an account and signs in. Password: 8+ characters.</td></tr>
+              <tr><td><code>signOut()</code></td><td>Hangs up and forgets the session.</td></tr>
+              <tr><td><code>startCall(email, type)</code></td><td>Rings someone and connects. Returns the call ID.</td></tr>
+              <tr><td><code>join(callIdOrText)</code></td><td>Answers and connects. Accepts a bare ID or a whole invite message.</td></tr>
+              <tr><td><code>hangUp()</code></td><td>Leaves; cancels a call nobody answered, otherwise ends it.</td></tr>
+              <tr><td><code>release()</code></td><td>Hangs up and frees the room for good.</td></tr>
+              <tr><td><code>CallIds.inviteMessage(callId)</code></td><td>Text to share so the other person can paste and join.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>App server endpoints</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Endpoint</th><th>Sends</th><th>Returns</th></tr></thead>
+            <tbody>
+              <tr><td><code>POST /register</code></td><td><code>email, password, fullName</code></td><td><code>userId, email, fullName, apiKey</code></td></tr>
+              <tr><td><code>POST /login</code></td><td><code>email, password</code></td><td><code>userId, email, apiKey</code></td></tr>
+              <tr><td><code>POST /ringCall</code></td><td><code>calleeEmail, callType</code></td><td><code>callId, roomName, rang</code></td></tr>
+              <tr><td><code>POST /ringGroup</code></td><td><code>streamId, callType</code></td><td><code>callId, roomName, groupName</code></td></tr>
+              <tr><td><code>POST /callToken</code></td><td><code>callId</code></td><td><code>token, livekitUrl, expiresInSeconds</code></td></tr>
+              <tr><td><code>POST /callStatus</code></td><td><code>callId</code></td><td><code>state</code>: ringing, answered, cancelled, declined, ended, missed</td></tr>
+              <tr><td><code>POST /publishCallTransition</code></td><td><code>callId, originInstallationId, state</code></td><td><code>ok</code></td></tr>
+              <tr><td><code>POST /cancelCall</code></td><td><code>callId, originInstallationId, reason</code></td><td><code>ok</code></td></tr>
+              <tr><td><code>POST /registerDevice</code></td><td><code>installationId, platform, callFcmToken, ...</code></td><td><code>ok, reachability</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Everything except <code>/register</code> and <code>/login</code> needs the <code>X-Zulip-Email</code> and <code>X-Zulip-Api-Key</code> headers from the signed-in session. The kit adds them.</p>
+      </section>
+
+    </main>
+  </div>
+
+  <footer>WibeChat Android SDK 2.29.1 · calls kit from wibechat-quickstart · Apache License 2.0</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem("wcguide:" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem("wcguide:" + k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  // ---------- Kotlin-ish highlighter ----------
+  var KEYWORDS = "val|var|fun|private|override|suspend|return|if|else|when|is|as|class|object|import|package|null|true|false|try|catch|in|by|lazy|this";
+  var TOKEN = new RegExp("(\\/\\/[^\\n]*)|(\"(?:[^\"\\\\\\n]|\\\\.)*\")|\\b(" + KEYWORDS + ")\\b|(@[A-Za-z]+)|\\b([A-Z][A-Za-z0-9_]*)\\b|\\b(\\d+)\\b", "g");
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function highlight(src) {
+    var out = "", last = 0, m;
+    TOKEN.lastIndex = 0;
+    while ((m = TOKEN.exec(src)) !== null) {
+      out += esc(src.slice(last, m.index));
+      var cls = m[1] ? "c" : m[2] ? "s" : m[3] ? "k" : m[4] ? "a" : m[5] ? "t" : "n";
+      out += '<span class="' + cls + '">' + esc(m[0]) + "</span>";
+      last = TOKEN.lastIndex;
+    }
+    return out + esc(src.slice(last));
+  }
+  function renderCode(pre, src) { pre.dataset.src = src; pre.innerHTML = highlight(src); }
+  document.querySelectorAll("pre[data-kotlin]").forEach(function (pre) { if (pre.textContent.trim()) renderCode(pre, pre.textContent); });
+
+  // ---------- copy ----------
+  function copyText(btn, text, node, label) {
+    label = label || btn.textContent;
+    function flash(t) { btn.textContent = t; btn.classList.add("ok"); setTimeout(function () { btn.textContent = label; btn.classList.remove("ok"); }, 1600); }
+    function fallback() {
+      if (!node) return;
+      var r = document.createRange(); r.selectNodeContents(node);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      flash("Selected, press Ctrl+C");
+    }
+    try { navigator.clipboard.writeText(text).then(function () { flash("Copied"); }, fallback); } catch (e) { fallback(); }
+  }
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".copy");
+    if (!btn) return;
+    var block = btn.closest(".code");
+    var node = Array.prototype.find.call(block.querySelectorAll("pre"), function (p) { return !p.hidden; });
+    copyText(btn, node.dataset.src || node.textContent, node, "Copy");
+  });
+
+  // ---------- build tabs ----------
+  function setBuild(kind) {
+    document.querySelectorAll("[data-lang-group]").forEach(function (g) {
+      g.querySelectorAll("[data-build]").forEach(function (b) { b.setAttribute("aria-selected", b.dataset.build === kind ? "true" : "false"); });
+      g.querySelector("[data-build-kts]").hidden = kind !== "kts";
+      g.querySelector("[data-build-groovy]").hidden = kind !== "groovy";
+      var f = g.querySelector(".code-file"); f.textContent = kind === "kts" ? f.dataset.fileKts : f.dataset.fileGroovy;
+    });
+    store.set("build", kind);
+  }
+  document.addEventListener("click", function (e) { var b = e.target.closest("[data-build]"); if (b) setBuild(b.dataset.build); });
+  setBuild(store.get("build", "kts"));
+
+  // ---------- progress ----------
+  var STEPS = ["install", "kit", "permissions", "signin", "calls", "phases", "controls"];
+  var done = store.get("done2", {});
+  function renderProgress() {
+    var n = STEPS.filter(function (s) { return done[s]; }).length;
+    $("progress-count").textContent = n + " of " + STEPS.length;
+    $("progress-fill").style.width = (n / STEPS.length * 100) + "%";
+    STEPS.forEach(function (s) {
+      var link = document.querySelector('.steps a[data-step="' + s + '"]'); if (link) link.classList.toggle("done", !!done[s]);
+      var box = document.querySelector('input[data-done="' + s + '"]'); if (box) box.checked = !!done[s];
+    });
+  }
+  document.querySelectorAll("input[data-done]").forEach(function (box) {
+    box.addEventListener("change", function () { done[box.dataset.done] = box.checked; store.set("done2", done); renderProgress(); });
+  });
+  renderProgress();
+
+  var links = Array.prototype.slice.call(document.querySelectorAll(".steps a"));
+  var sections = links.map(function (a) { return document.querySelector(a.getAttribute("href")); });
+  function markActive() {
+    var y = window.scrollY + 120, idx = 0;
+    sections.forEach(function (s, i) { if (s && s.offsetTop <= y) idx = i; });
+    links.forEach(function (a, i) { a.classList.toggle("active", i === idx); });
+  }
+  window.addEventListener("scroll", markActive, { passive: true });
+  markActive();
+
+  // ---------- builder ----------
+  var mode = "start", video = true;
+  function q(s) { return '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"'; }
+  function setPressed(a, b, first) { $(a).setAttribute("aria-pressed", first ? "true" : "false"); $(b).setAttribute("aria-pressed", first ? "false" : "true"); }
+  function buildCode() {
+    var type = video ? "CallType.VIDEO" : "CallType.AUDIO";
+    var L = [];
+    L.push("private val calls get() = (application as MyApp).calls");
+    L.push("");
+    if (mode === "start") {
+      L.push("fun onCallClicked() = withCallPermissions(video = " + video + ") {");
+      L.push("    lifecycleScope.launch {");
+      L.push("        calls.startCall(" + q($("in-callee").value.trim() || "friend@example.com") + ", " + type + ")");
+      L.push("            .onSuccess { callId ->");
+      L.push("                // Let the other person join: share CallIds.inviteMessage(callId)");
+      L.push("            }");
+      L.push("            .onFailure { showError(it.message) }   // e.g. \"that person or call does not exist\"");
+      L.push("    }");
+      L.push("}");
+    } else {
+      L.push("// Reads the shared invite from the clipboard; the kit finds the call ID in it.");
+      L.push("fun onPasteAndJoinClicked() = withCallPermissions(video = " + video + ") {");
+      L.push("    val clip = (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).primaryClip");
+      L.push("    val text = clip?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty()");
+      L.push("    lifecycleScope.launch {");
+      L.push("        calls.join(text, " + type + ")");
+      L.push("            .onFailure { showError(it.message) }   // e.g. \"the call has already ended\"");
+      L.push("    }");
+      L.push("}");
+    }
+    renderCode($("gen-code"), L.join("\n"));
+    $("callee-field").hidden = mode !== "start";
+  }
+  $("mode-start").addEventListener("click", function () { mode = "start"; setPressed("mode-start", "mode-join", true); buildCode(); });
+  $("mode-join").addEventListener("click", function () { mode = "join"; setPressed("mode-start", "mode-join", false); buildCode(); });
+  $("type-video").addEventListener("click", function () { video = true; setPressed("type-video", "type-audio", true); buildCode(); });
+  $("type-audio").addEventListener("click", function () { video = false; setPressed("type-video", "type-audio", false); buildCode(); });
+  $("builder").addEventListener("input", buildCode);
+  $("builder").addEventListener("submit", function (e) { e.preventDefault(); });
+  buildCode();
+
+  // ---------- phases ----------
+  var PHASES = [
+    { name: "Idle", when: "No call. Show your home screen. If message is set, the last call ended unexpectedly; show it.",
+      code: "is CallPhase.Idle -> {\n    showHome()\n    phase.message?.let { showStatus(it) }   // e.g. \"The call was declined.\"\n}" },
+    { name: "Connecting", when: "Ringing someone or joining. The room is not connected yet. Show a progress state and disable the call buttons.",
+      code: "is CallPhase.Connecting -> {\n    showProgress(phase.label)   // \"Ringing…\" or \"Joining…\"\n}" },
+    { name: "InCall · waiting", when: "You're in the room and your mic (and camera for video) are on, but the other person hasn't joined yet (peerJoined = false).",
+      code: "is CallPhase.InCall -> {\n    showCallScreen()\n    if (!phase.peerJoined) showStatus(if (phase.isCaller) \"Ringing…\" else \"Joining…\")\n}" },
+    { name: "InCall · connected", when: "The other person is in the room (peerJoined = true). Their audio plays automatically; attach their video when it arrives.",
+      code: "is CallPhase.InCall -> {\n    showCallScreen()\n    if (phase.peerJoined) showStatus(\"Connected\")\n}" },
+    { name: "Idle · ended", when: "The call is over: you hung up, or the other side declined, cancelled or ended it. The kit has already disconnected the room.",
+      code: "is CallPhase.Idle -> {\n    showHome()\n    showStatus(phase.message ?: \"Call ended\")\n}" }
+  ];
+  var WRAP = function (inner) {
+    return "lifecycleScope.launch {\n    calls.phase.collect { phase ->\n        when (phase) {\n" +
+      inner.split("\n").map(function (l) { return "            " + l; }).join("\n") +
+      "\n            else -> {}\n        }\n    }\n}";
+  };
+  PHASES.forEach(function (p, i) {
+    var li = document.createElement("li"), b = document.createElement("button");
+    b.type = "button"; b.innerHTML = '<span class="dot"></span><span class="ev-name">' + esc(p.name) + "</span>";
+    b.addEventListener("click", function () { selectPhase(i); });
+    li.appendChild(b); $("timeline").appendChild(li);
+  });
+  function selectPhase(i) {
+    $("timeline").querySelectorAll("button").forEach(function (b, j) { b.setAttribute("aria-selected", j === i ? "true" : "false"); });
+    $("phase-when").textContent = PHASES[i].when;
+    renderCode($("phase-code"), WRAP(PHASES[i].code));
+  }
+  selectPhase(1);
+
+  // ---------- behind the scenes ----------
+  var FLOWS = {
+    out: [
+      ["App → app server", "POST /login", "Once per install. Returns the user's API key, sent as X-Zulip-Email / X-Zulip-Api-Key on every later request."],
+      ["App → app server", "POST /ringCall", "Creates the call and rings the other person's registered phones. Returns the callId."],
+      ["App → app server", "POST /callToken", "Exchanges the callId for a short-lived room token. The server checks you belong to this call."],
+      ["App → media server", "room.connect(livekitUrl, token)", "Connects audio and video to wss://call.wibechat.com, then turns on the mic and camera."],
+      ["App → app server", "POST /callStatus  (every 3 s)", "Watches for answered, declined, cancelled, ended or missed."],
+      ["App → app server", "POST /cancelCall  or  /publishCallTransition {ended}", "On hang-up: cancel if nobody answered yet, otherwise end the call for everyone."]
+    ],
+    "in": [
+      ["Invite or push", "callId arrives", "From a shared invite today, or an incoming-call push (rk.callId) once ringing is added."],
+      ["App → app server", "POST /publishCallTransition {answered}", "Tells the server and the caller that you picked up."],
+      ["App → app server", "POST /callToken", "Same exchange as the caller. Only the person who was called can get a token."],
+      ["App → media server", "room.connect(livekitUrl, token)", "Joins the same room, then turns on the mic and camera."],
+      ["App → app server", "POST /callStatus  (every 3 s)", "Closes the call here when the caller hangs up."],
+      ["App → app server", "POST /publishCallTransition {ended}", "On hang-up."]
+    ]
+  };
+  function showFlow(which) {
+    setPressed("flow-out", "flow-in", which === "out");
+    $("flow").innerHTML = FLOWS[which].map(function (s) {
+      return '<li><div><div class="who">' + esc(s[0]) + '</div><div class="call">' + esc(s[1]) + '</div><div class="why">' + esc(s[2]) + "</div></div></li>";
+    }).join("");
+  }
+  $("flow-out").addEventListener("click", function () { showFlow("out"); });
+  $("flow-in").addEventListener("click", function () { showFlow("in"); });
+  showFlow("out");
+
+  // ---------- AI prompts ----------
+  var CONTEXT = [
+    "Context: WibeChat calling platform (Android, Kotlin, coroutines).",
+    "- Media SDK: com.wibechat:wibechat-android:2.29.1 from Maven Central; also add maven(\"https://jitpack.io\") to repositories (one transitive dependency lives there). Entry point: WibeChat.create(appContext) returns a Room. room.connect(url, token) is a suspend function that throws on failure. room.localParticipant.setMicrophoneEnabled(Boolean) / setCameraEnabled(Boolean) are suspend. Video: com.wibechat.android.renderer.SurfaceViewRenderer / TextureViewRenderer views, room.initVideoRenderer(view) once, then videoTrack.addRenderer(view) / removeRenderer(view). Events: room.events.collect { } with RoomEvent.TrackSubscribed, TrackUnsubscribed, ParticipantConnected, ParticipantDisconnected, Disconnected (import com.wibechat.android.events.collect).",
+    "- App server base URL: https://us-central1-wibechat-demo-2026.cloudfunctions.net . All endpoints are POST with a JSON body. Errors return {\"error\": \"...\"} with a non-2xx status.",
+    "- POST /register {email, password (8+ chars), fullName} -> 201 {userId, email, fullName, apiKey}. POST /login {email, password} -> 200 {userId, email, apiKey}; 401 = wrong credentials.",
+    "- Every other endpoint needs headers X-Zulip-Email: <email> and X-Zulip-Api-Key: <apiKey> from the session.",
+    "- POST /ringCall {calleeEmail, callType: \"audio\"|\"video\"} -> {callId, roomName, rang}. 404 = callee not found.",
+    "- POST /ringGroup {streamId, callType} -> {callId, roomName, groupName, members, rang}.",
+    "- POST /callToken {callId} -> {token, roomName, livekitUrl, expiresInSeconds}. 403 = not a participant, 409 = call already ended or expired. Connect with room.connect(livekitUrl, token).",
+    "- POST /callStatus {callId} -> {state}: ringing | answered | cancelled | declined | ended | missed (the last four are terminal).",
+    "- POST /publishCallTransition {callId, originInstallationId, state: answered|declined|ended}. POST /cancelCall {callId, originInstallationId, reason: \"callerCancelled\"}. originInstallationId is a stable random UUID per app install.",
+    "- POST /registerDevice {installationId, platform: \"android\", environment, appBuild, callFcmToken} ; POST /deactivateDevice {installationId}.",
+    "- Security rules: never put a license key or server API secret in the app; never choose room names or identities on the client; never log API keys, passwords, FCM tokens or room tokens.",
+    "- Project rules: functions return Result instead of throwing; user-facing error messages in plain language; one instance of the calls logic per app (Application class) that owns its own CoroutineScope."
+  ].join("\n");
+
+  var KIT_SPEC = "The calls kit (package \"calls\"): AppServer (OkHttp client for the endpoints above, org.json, 15 s connect / 20 s read timeouts, every function returns Result, non-2xx becomes AppServerException(status, error)); SessionStore (SharedPreferences: userId, email, apiKey, fullName, plus a stable installationId UUID); CallIds (find a UUID call ID inside any text; build a shareable invite message); WibeChatCalls (owns the Room and its own CoroutineScope; exposes session: StateFlow<Session?> and phase: StateFlow<CallPhase> with CallPhase = Idle(message), Connecting(label), InCall(callId, type, isCaller, peerJoined); functions signIn, register, signOut, startCall(email, type) returning the callId, join(callIdOrText) which publishes answered then fetches the token, hangUp() which calls /cancelCall when the caller hangs up while the call is still ringing and otherwise publishes ended, release()). After room.connect: enable the mic, enable the camera for video calls if permission is granted, then set phase to InCall. Poll /callStatus every 3 s while in a call and end the call locally on a terminal state. Map HTTP errors to friendly messages: 401 wrong password or session expired, 403 not a participant, 404 not found, 409 call already ended.";
+
+  var PROMPTS = {
+    all: [{ title: "Do every step at once", when: "Paste into an AI assistant with your project open to add sign-in, calling and the call screen in one go.",
+      task: "Task: add WibeChat audio/video calling to this Android app.\n1. Add the dependencies (SDK, JitPack repository, OkHttp 4.12.0).\n2. " + KIT_SPEC + "\n3. Create the WibeChatCalls instance in the Application class.\n4. Build the UI: sign-in/register screen, home screen (call by email with an audio/video choice; join from a pasted invite with a \"Paste & join\" button), call screen (remote video full screen, local preview, mute, camera, leave, copy and share the invite). Request RECORD_AUDIO (and CAMERA for video) before calling or joining.\n5. Build the project and fix any compile errors." }],
+    install: [{ title: "Add the SDK", when: "Adds the repositories and dependencies to your Gradle files.",
+      task: "Task: add the WibeChat Android SDK to this project. In the settings file, make sure the repositories are google(), mavenCentral() and maven(\"https://jitpack.io\"). In the app module add implementation(\"com.wibechat:wibechat-android:2.29.1\") and implementation(\"com.squareup.okhttp3:okhttp:4.12.0\"). Keep minSdk at 21 or higher. Use the build-script language this project already uses (Kotlin DSL or Groovy). Sync and build, and fix any dependency conflicts." }],
+    kit: [{ title: "Create the calls kit", when: "Writes the four kit files and creates the instance in your Application class.",
+      task: "Task: create the WibeChat calls kit in this app.\n" + KIT_SPEC + "\nThen create one WibeChatCalls instance in the Application class (by lazy, appServerUrl = https://us-central1-wibechat-demo-2026.cloudfunctions.net) and register that class in AndroidManifest.xml. Add KDoc to every public member. Build and fix compile errors." }],
+    permissions: [{ title: "Ask for call permissions", when: "Adds a reusable runtime permission helper for calls.",
+      task: "Task: add runtime permission handling for WibeChat calls. Create a helper in the activity that starts or joins calls: withCallPermissions(video: Boolean, action: () -> Unit). It requests RECORD_AUDIO always and CAMERA only for video calls using ActivityResultContracts.RequestMultiplePermissions, runs the action when the microphone is granted (a call can continue without the camera), and shows a short message explaining why the microphone is needed when it is denied. Don't add these permissions to the manifest; the SDK already declares them. Build and fix compile errors." }],
+    signin: [{ title: "Build the sign-in screen", when: "A sign-in / create-account screen wired to calls.signIn and calls.register.",
+      task: "Task: build the WibeChat sign-in screen on top of the existing WibeChatCalls class. One screen with a toggle between Sign in and Create account. Fields: full name (create account only), email, password with a show/hide toggle. Validate before sending: name required when creating an account, a valid email, a password of at least 8 characters when creating an account. Call calls.signIn(email, password) or calls.register(email, password, fullName) in lifecycleScope, disable the button while waiting, and show the failure message from the Result as-is. Observe calls.session: show this screen when it is null and the home screen otherwise, so a returning user skips sign-in. Add a Sign out button on the home screen that calls calls.signOut(). Build and fix compile errors." }],
+    calls: [{ title: "Build the start and join screen", when: "Home screen with Call by email and Paste & join.",
+      task: "Task: build the home screen for WibeChat calls on top of the existing WibeChatCalls class. Section \"Start a call\": an email field, an Audio/Video toggle and a Call button that runs calls.startCall(email, type) after withCallPermissions. Section \"Join a call\": a call ID field, a Join button, and a \"Paste & join\" button that reads the clipboard (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager, coerceToText) and passes the whole text to calls.join(text), which finds the call ID itself; if the clipboard has no call ID, say so. Observe calls.phase: while Connecting, disable the buttons and show phase.label; on Idle, show phase.message if it is set. Build and fix compile errors." }],
+    phases: [
+      { title: "Build the call screen (XML views)", when: "Video, waiting state and status text driven by calls.phase.",
+        task: "Task: build the in-call screen for WibeChat on top of the existing WibeChatCalls class, with XML views. Layout: com.wibechat.android.renderer.SurfaceViewRenderer full screen for the other person, com.wibechat.android.renderer.TextureViewRenderer 110x160dp in the top-right corner for my camera, a \"Waiting for the other person to join…\" text in the middle, and a top bar with the call status and call ID. Call calls.room.initVideoRenderer(view) once for both views. Show this screen while calls.phase is InCall; status text \"Connected\" when peerJoined, otherwise \"Ringing…\" for the caller and \"Joining…\" for the callee. Attach my camera track (room.localParticipant.getTrackPublication(Track.Source.CAMERA)?.track as? VideoTrack) when the phase becomes InCall. Attach the other person's VideoTrack on RoomEvent.TrackSubscribed and detach it on TrackUnsubscribed (collect calls.room.events). Detach all renderers when the phase returns to Idle. Build and fix compile errors." },
+      { title: "Build the call screen (Jetpack Compose)", when: "The same screen for apps that use Compose.",
+        task: "Task: build the WibeChat call UI in Jetpack Compose on top of the existing WibeChatCalls class (session and phase StateFlows, room property). Collect both flows with collectAsStateWithLifecycle and show SignIn, Home or Call composables accordingly. Render video with AndroidView wrapping com.wibechat.android.renderer.TextureViewRenderer: call calls.room.initVideoRenderer(view) in factory, attach the track in update and remove the renderer in onRelease. Keep the other person's VideoTrack in state, updated from RoomEvent.TrackSubscribed / TrackUnsubscribed on calls.room.events. Show \"Connected\" when phase.peerJoined is true. Build and fix compile errors." }
+    ],
+    controls: [{ title: "Add mute, camera and leave", when: "Call controls plus invite sharing on the call screen.",
+      task: "Task: add call controls to the WibeChat call screen. Buttons: Mute/Unmute toggling calls.room.localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled); Camera off/on toggling setCameraEnabled(!isCameraEnabled) (if the camera permission is missing, explain how to allow it instead) and re-attach the local preview afterwards; Leave calling calls.hangUp(). Update the button labels from isMicrophoneEnabled / isCameraEnabled. Add Copy and Share buttons next to the call ID: Copy puts CallIds.inviteMessage(callId) on the clipboard, Share opens Intent.ACTION_SEND with the same text. When the activity finishes, call calls.hangUp(). Build and fix compile errors." }],
+    ringing: [{ title: "Add ringing incoming calls (push)", when: "FCM, an incoming-call screen, Accept and Decline, and a foreground service during calls.",
+      task: "Task: add incoming-call ringing with Firebase Cloud Messaging to the app that already uses WibeChatCalls.\n1. Add Firebase Messaging (Firebase BoM) and the google-services plugin; app/google-services.json comes from the Firebase project wibechat-demo-2026 (ask me for it if it's missing).\n2. After sign-in and in onNewToken, call POST /registerDevice {installationId, platform: \"android\", environment: \"production\", appBuild, callFcmToken}. On sign-out call /deactivateDevice.\n3. In a FirebaseMessagingService handle data messages: when data[\"rk.type\"] == \"incoming\", read rk.callId, rk.callerName, rk.callerHandle, rk.callType, rk.timeoutSeconds and rk.extra (JSON with roomName). Show a high-priority call notification (NotificationCompat.CallStyle.forIncomingCall on a ringtone channel) with a full-screen intent to an IncomingCallActivity that works on the lock screen. Dismiss it after rk.timeoutSeconds. For any other rk.type with the same rk.callId, dismiss the ringing notification and, if that call is active, hang up. Log unknown payload keys in debug builds only.\n4. Accept: open the app and call calls.join(callId, type). Decline: from a BroadcastReceiver (goAsync), POST /publishCallTransition {callId, originInstallationId, state: \"declined\"} without opening the app.\n5. While in a call, run a foreground service (types phoneCall|microphone|camera) with an ongoing CallStyle notification that has a Hang up action calling calls.hangUp().\n6. Add the permissions: POST_NOTIFICATIONS (request at runtime on Android 13+), USE_FULL_SCREEN_INTENT, FOREGROUND_SERVICE and the matching FOREGROUND_SERVICE_* types.\n7. Build and fix compile errors, then list the manual test steps." }],
+    group: [{ title: "Add group calls", when: "/ringGroup plus a video grid with one tile per person.",
+      task: "Task: add group calls to the app that already uses WibeChatCalls. Add startGroupCall(streamId: Long, type: CallType): Result<String> to WibeChatCalls, using POST /ringGroup {streamId, callType} and then the same /callToken + room.connect path as startCall. Members join with the existing join(callId). Update the call screen to show every remote participant's video in a grid (one renderer per participant, added on RoomEvent.TrackSubscribed and removed on TrackUnsubscribed / ParticipantDisconnected), with the participant's name under each tile. On hang-up, publish ended for yourself only; don't cancel the whole group call unless you are the caller and nobody answered. Build and fix compile errors." }],
+    demo: [{ title: "Add a shared demo room", when: "Backend endpoint plus a Join demo room button.",
+      task: "Task: add a shared \"demo room\" anyone signed in can join.\nBackend (Firebase Cloud Functions, Node.js): add POST /demoRoomToken next to the existing /callToken. Authenticate with X-Zulip-Email / X-Zulip-Api-Key exactly like /callToken does, then request a token from the licensed token broker (POST https://api.wibechat.com/v1/auth/token with license_key from Secret Manager, room_name fixed to \"wibechat-demo\", user_identity = the verified Zulip user ID, user_name = the verified full name, ttl_seconds 3600; read data.access_token). Return {token, roomName, livekitUrl: \"wss://call.wibechat.com\"}. Never accept a room name from the client and never return or log the license key.\nApp: add joinDemoRoom() to WibeChatCalls that calls /demoRoomToken and connects, with no call-state polling and no transitions. Add a \"Join demo room\" button on the home screen and show all participants in a video grid. Build and fix compile errors." }],
+    debug: [{ title: "Debug a call that won't connect", when: "Paste the error text or logcat output after this prompt.",
+      task: "Task: help me find out why a WibeChat call fails. Check in this order and tell me which step fails and why: (1) sign-in works and the session has an apiKey; (2) /ringCall or /publishCallTransition {answered} returns 2xx (404 = wrong email, 403 = not a participant, 409 = call already ended or missed: the ring window is about 30 s); (3) /callToken returns a non-empty token (409 = call over, 502/503 = server token broker problem); (4) room.connect succeeds (a 401 here means the token was rejected; timeouts mean the network blocks media and the server needs TURN on port 443); (5) both sides granted microphone/camera permission and the remote VideoTrack is attached to a renderer. Read the error output I paste below and the relevant code in this project. Don't print API keys or tokens." }]
+  };
+
+  function promptCard(p) {
+    var full = p.task + "\n\n" + CONTEXT;
+    var card = document.createElement("div"); card.className = "prompt inline";
+    card.innerHTML = '<div class="prompt-head"><div><h3>' + esc(p.title) + '</h3><p>' + esc(p.when) + '</p></div><div class="prompt-actions"><button type="button" class="btn show">Show</button><button type="button" class="btn primary cp">Copy prompt</button></div></div><pre hidden></pre>';
+    var pre = card.querySelector("pre"); pre.textContent = full;
+    card.querySelector(".show").addEventListener("click", function () { pre.hidden = !pre.hidden; this.textContent = pre.hidden ? "Show" : "Hide"; });
+    card.querySelector(".cp").addEventListener("click", function () { copyText(this, full, pre.hidden ? null : pre, "Copy prompt"); });
+    return card;
+  }
+  document.querySelectorAll(".prompt-slot").forEach(function (slot) {
+    (PROMPTS[slot.dataset.prompts] || []).forEach(function (p) { slot.appendChild(promptCard(p)); });
+  });
+
+  // ---------- troubleshooting ----------
+  var FAQ = [
+    { q: "Gradle can't find audioswitch", sym: "Could not find com.github.davidliu:audioswitch", a: "<p>Add JitPack to your repositories (step 1). One SDK dependency is only published there.</p>" },
+    { q: "\"Wrong email or password.\"", sym: "/login returned 401", a: "<p>The account doesn't exist or the password is wrong. New users can create an account with Register.</p>" },
+    { q: "\"that person or call does not exist\"", sym: "/ringCall returned 404", a: "<p>No WibeChat account uses that email. Check the spelling, or ask them to register first.</p>" },
+    { q: "\"you are not a participant in this call\"", sym: "/callToken or /publishCallTransition returned 403", a: "<p>Only the person who was called (or an invited group member) can join. Sign in with the account whose email the caller used.</p>" },
+    { q: "\"the call has already ended\"", sym: "409 on join or token", a: "<p>The caller hung up, someone declined, or the call rang for about 30 seconds without an answer and became missed. Start a new call.</p>" },
+    { q: "\"your session has expired\"", sym: "401 on any call request", a: "<p>The saved API key is no longer valid. Sign out and sign in again.</p>" },
+    { q: "Connected, but no video or sound", sym: "black video, silence", a: "<p>Check that both phones granted microphone and camera permission, that you attach the remote VideoTrack on <code>TrackSubscribed</code>, and that the phone isn't muted.</p>" },
+    { q: "Stuck on connecting on some networks", sym: "timeout, connect hangs", a: "<p>Some company and mobile networks block the ports media uses. The WibeChat server needs TURN over TCP/TLS on port 443 for those networks.</p>" },
+    { q: "Android Studio: \"Activity class does not exist\"", sym: "Error running app", a: "<p>Android Studio's project model is out of date after package names changed. Run File → Sync Project with Gradle Files, then recreate the run configuration.</p>" }
+  ];
+  var faq = $("faq");
+  FAQ.forEach(function (f) {
+    var d = document.createElement("details");
+    d.innerHTML = "<summary><span>" + esc(f.q) + "</span></summary><div class=\"body\"><span class=\"sym\">" + esc(f.sym) + "</span>" + f.a + "</div>";
+    d.dataset.text = (f.q + " " + f.sym + " " + f.a.replace(/<[^>]+>/g, "")).toLowerCase();
+    faq.appendChild(d);
+  });
+  $("faq-search").addEventListener("input", function () {
+    var term = this.value.trim().toLowerCase(), shown = 0;
+    faq.querySelectorAll("details").forEach(function (d) {
+      var hit = !term || d.dataset.text.indexOf(term) !== -1;
+      d.hidden = !hit; if (hit) shown++;
+      if (term && hit) d.open = true;
+    });
+    $("faq-empty").hidden = shown > 0;
+  });
+})();
+</script>
+
+</body>
+</html>

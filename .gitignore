@@ -1,0 +1,24 @@
+# Build output
+build/
+.gradle/
+.kotlin/
+captures/
+*.apk
+*.aab
+*.hprof
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Machine-specific / sensitive. Never commit or share these.
+local.properties
+secrets.properties
+app/google-services.json
+*.jks
+*.keystore
+
+# Release signing
+keystore.properties
+release/
