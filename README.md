@@ -1,7 +1,11 @@
 # WibeChat Android demo
 
-A native Android (Kotlin + Jetpack Compose) app showing WibeChat audio and video calls:
+A native Android (Kotlin) app showing WibeChat audio and video calls:
 sign in, create rooms, call people one-to-one, ring their phone, and keep a call history.
+
+The app comes in two versions with the same features and the same backend:
+`:app` (Jetpack Compose) and `:app-xml` (XML layouts, Fragments, RecyclerView, Material Components).
+Pick the UI toolkit your team uses; both share the `:core` and `:calls` modules.
 
 It talks to the same backend as the Flutter demo, so Android and Flutter users can call each other.
 
@@ -12,6 +16,7 @@ It talks to the same backend as the Flutter demo, so Android and Flutter users c
 | `:calls` | `CallSession` (one call: connect, mic, camera, flip, screen share, participant tiles as a `StateFlow`) and `VideoTrackView` (Compose video renderer). **No Firebase.** Copy this module into your own app. | WibeChat SDK only |
 | `:core`  | `AppConfig` (build-time settings), Firebase Auth + Firestore repositories, clients for the two Cloud Functions. No UI. | Firebase, OkHttp |
 | `:app`   | Compose screens, push handling, the incoming-call screen, Picture-in-Picture. | `:core`, `:calls` |
+| `:app-xml` | The same app with XML layouts + ViewBinding: Fragments, RecyclerView adapters, Material Components, and `TextureViewRenderer` tiles for video. | `:core`, `:calls` |
 
 ```
 app/src/main/java/com/wibechat/demo/
@@ -23,6 +28,15 @@ app/src/main/java/com/wibechat/demo/
   feature/call      Call screen + CallViewModel (grid, 1:1 layout, controls, add to call)
   notifications     FCM service, ringing notification, full-screen incoming call, decline/timeout
   call              CallLauncher (single way to open a call), ActiveCall (in-app call signals)
+
+app-xml/src/main/java/com/wibechat/xmldemo/
+  MainActivity      Picks the screen (sign-in → workspace setup → home), opens calls, Picture-in-Picture
+  feature/auth      LoginFragment, SignupFragment, Google sign-in
+  feature/workspace WorkspaceSetupFragment
+  feature/home      HomeFragment (tabs, search, account drawer) + RecyclerView adapters
+  feature/call      CallFragment, VideoGridView, ParticipantTileView, quality and add-to-call sheets
+  notifications     Same push handling as :app, with an XML full-screen incoming-call activity
+app-xml/src/main/res/layout/   All screens as XML layouts
 ```
 
 ## How a call works
@@ -55,12 +69,14 @@ Firestore (named database, see `FIRESTORE_DATABASE_ID`): `users`, `users/{uid}/c
    - `FIRESTORE_DATABASE_ID`: the Firestore database name
    - `GOOGLE_WEB_CLIENT_ID`: optional, enables the Google button
 3. **Firebase config.** In the Firebase console, add an Android app with package `com.wibechat.android`.
-   Download its `google-services.json` into `app/` (see `app/google-services.json.example`).
+   Download its `google-services.json` into `app/` and `app-xml/` (see `app/google-services.json.example`).
    For Google sign-in, also add your debug/release SHA-1 fingerprint there.
-4. Run the `app` configuration on a real device. Calls need a camera and microphone. Use two devices (or one
-   device plus the Flutter app) to test calling.
+4. Run the `app` (Compose) or `app-xml` (XML) configuration on a real device. Both use the application ID
+   `com.wibechat.android`, so installing one replaces the other. Calls need a camera and microphone.
+   Use two devices (or one device plus the Flutter app) to call.
 
-`secrets.properties`, `app/google-services.json` and `local.properties` are git-ignored. Don't commit or share them.
+`secrets.properties`, `app/google-services.json`, `app-xml/google-services.json` and `local.properties` are
+git-ignored. Don't commit or share them.
 
 ## Using the calls module on its own
 
